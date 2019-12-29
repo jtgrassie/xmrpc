@@ -31,18 +31,29 @@
 
 usage() {
     me="$(basename $0)"
-    cat <<EOF
-Usage:
+    echo -e "$(cat <<EOF
+\033[1mUSAGE\033[0m
     $me [host:]port method [name:value ...]
 
-Examples:
-    xmrpc.sh 28081 get_version
-    xmrpc.sh node.xmr.to:18081 get_version
-    xmrpc.sh 28081 get_block height:123456
-    xmrpc.sh 28081 get_block hash:aaaac8fe6bd05f32aa68b9bd13d66d2056335a1a4a88c788f7a07ab8a1e64912
-    xmrpc.sh 28084 get_transfers in:true
-    xmrpc.sh 28084 get_address account_index:0 address_index:[0,1]
+\033[1mEXAMPLES\033[0m
+    $me 28081 get_version
+    $me node.xmr.to:18081 get_version
+    $me 28081 get_block height:123456
+    $me 28081 get_block hash:aaaac8fe6bd05f32aa68b9bd13d66d2056335a1a4a88c788f7a07ab8a1e64912
+    $me 28084 get_transfers in:true
+    $me 28084 get_address account_index:0 address_index:[0,1]
+
+\033[1mSEARCHING\033[0m
+    If you have the Monero source tree and set an enviroment variable
+    MONERO_ROOT to its path, you can then use the \`doc\` command to search
+    methods and get the expected parameters from the code. For example:
+
+    $me doc transfer
+    $me doc ".*bulk.*pay"
+    $me doc ".*pay"
+    $me doc ".*"
 EOF
+)"
     exit -1
 }
 
@@ -72,6 +83,18 @@ parse_nv() {
 }
 
 [[ $# < 2 ]] && usage;
+
+if [[ "$1" == "doc" ]]; then
+    [ -z "$MONERO_ROOT" ] \
+        && echo "Environment variable MONERO_ROOT needs setting for the doc command!" \
+        && exit -2
+    m=$(echo -n "$2" | tr a-z A-Z)
+    cat "$MONERO_ROOT/src/rpc/core_rpc_server_commands_defs.h" \
+        "$MONERO_ROOT/src/wallet/wallet_rpc_server_commands_defs.h" \
+        | sed -n '/COMMAND_RPC_'${m}'/,/};/p' | sed -E 's/};/};\
+  }/g'
+    exit
+fi
 
 if [[ "$1" == *:* ]]; then
     url="$1/json_rpc"
